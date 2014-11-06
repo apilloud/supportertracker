@@ -1332,8 +1332,8 @@ class AddressStandardizationSolution:
 
 		atom = re.match(r'^([0-9A-Z.-]+ [0-9/]* ?)(INTERSTATE|INTRST|INT|I) ?(' + highway_alternatives + r'|H)? ?([0-9]+)(.*)$', address)
 		if atom:
-			number = atom.match(5).replace(' BYP ', ' BYPASS ')
-			return atom.match(1) + "INTERSTATE " + atom.match(4) + self.getEolAbbr(number)
+			number = atom.group(5).replace(' BYP ', ' BYPASS ')
+			return atom.group(1) + "INTERSTATE " + atom.group(4) + self.getEolAbbr(number)
 
 		atom = re.match(r'^([0-9A-Z.-]+ ?[0-9/]* ?)(.*)( STATE| ST) (' + highway_alternatives + r')( NO | # | )?([0-9A-Z]+)(.*)$', address)
 		if atom:
@@ -1345,8 +1345,8 @@ class AddressStandardizationSolution:
 			if identifier in self.identifiers:
 				identifier = self.identifiers[identifier]
 				number = atom.group(7).replace(' #', '')
-				return atom.match(1) + state + " STATE HWY " + identifier + number
-			return atom.group(1) + state + " STATE HIGHWAY " + identifier + self.getEolAbbr(atom.match(7))
+				return atom.group(1) + state + " STATE HWY " + identifier + number
+			return atom.group(1) + state + " STATE HIGHWAY " + identifier + self.getEolAbbr(atom.group(7))
 
 		atom = re.match(r'^([0-9A-Z.-]+ ?[0-9/]* ?)(.*)( US| U S|UNITED STATES) (' + highway_alternatives + r')( NO | # | )?([0-9A-Z]+)(.*)$', address)
 		if atom:
@@ -1358,11 +1358,12 @@ class AddressStandardizationSolution:
 			if identifier in self.identifiers:
 				identifier = self.identifiers[identifier]
 				number = atom.group(7).replace(' #', '')
-				return atom.match(1) + state + " US HWY " + identifier + number
-			return atom.group(1) + state + " US HIGHWAY " + identifier + self.getEolAbbr(atom.match(7))
+				return atom.group(1) + state + " US HWY " + identifier + number
+			return atom.group(1) + state + " US HIGHWAY " + identifier + self.getEolAbbr(atom.group(7))
 
 		atom = re.match(r'^([0-9A-Z.-]+ ?[0-9/]* ?)(.*) (' + highway_alternatives + r')( NO | # | )?([0-9A-Z]+)(.*)$', address)
 		if atom:
+			state = atom.group(2)
 			if state in self.states:
 				state = self.states[state]
 
@@ -1370,12 +1371,12 @@ class AddressStandardizationSolution:
 			if identifier in self.identifiers:
 				identifier = self.identifiers[identifier]
 				number = atom.group(6).replace(' #', '')
-				return atom.match(1) + state + " HWY " + identifier + number
-			return atom.group(1) + state + " HIGHWAY " + identifier + self.getEolAbbr(atom.match(6))
+				return atom.group(1) + state + " HWY " + identifier + number
+			return atom.group(1) + state + " HIGHWAY " + identifier + self.getEolAbbr(atom.group(6))
 
 		atom = re.match(r'^((' + highway_alternatives + r'|H) ?(CONTRACT|C)|STAR) ?(ROUTE|RTE|RT|R)?( NO | # | )?([0-9]+) ?([A-Z]+)(.*)$', address)
 		if atom:
-			return "HC " + atom.match(6) + " BOX" + self.getEolAbbr(atom.match(8))
+			return "HC " + atom.group(6) + " BOX" + self.getEolAbbr(atom.group(8))
 
 		atom = re.match(r'^([0-9A-Z.-]+ [0-9/]* ?)(RANCH )(ROAD|RD)( NO | # | )?([0-9A-Z]+)(.*)$', address)
 		if atom:
@@ -1390,29 +1391,30 @@ class AddressStandardizationSolution:
 
 		atom = re.match(r'^([0-9A-Z/%.-]+ )(ROAD|RD)([A-Z #]+)([0-9A-Z]+)(.*)$', address)
 		if atom:
-			prefix = atom.match(1).replace('%', ' ')
-			return prefix + "ROAD " + atom.match(4) + self.getEolAbbr(atom.match(5))
+			prefix = atom.group(1).replace('%', ' ')
+			return prefix + "ROAD " + atom.group(4) + self.getEolAbbr(atom.group(5))
 
 		atom = re.match(r'^([0-9A-Z/%.-]+ )(ROUTE|RTE|RT)([A-Z #]+)([0-9A-Z]+)(.*)$', address)
 		if atom:
-			prefix = atom.match(1).replace('%', ' ')
-			return prefix + "ROUTE " + atom.match(4) + self.getEolAbbr(atom.match(5))
+			prefix = atom.group(1).replace('%', ' ')
+			return prefix + "ROUTE " + atom.group(4) + self.getEolAbbr(atom.group(5))
 
 		atom = re.match(r'^([0-9A-Z/%.-]+ )(AVENUE|AVENU|AVNUE|AVEN|AVN|AVE|AV) ([A-Z]+)(.*)$', address)
 		if atom:
-			prefix = atom.match(1).replace('%', ' ')
-			return prefix + "AVENUE " + atom.match(3) + self.getEolAbbr(atom.match(4))
+			prefix = atom.group(1).replace('%', ' ')
+			return prefix + "AVENUE " + atom.group(3) + self.getEolAbbr(atom.group(4))
 
 		atom = re.match(r'^([0-9A-Z/%.-]+ )(BOULEVARD|BOULV|BOUL|BLVD) ([A-Z]+)(.*)$', address)
 		if atom:
-			prefix = atom.match(1).replace('%', ' ')
-			return prefix + "BOULEVARD " + self.getEolAbbr(atom.match(3) + atom.match(4))
+			prefix = atom.group(1).replace('%', ' ')
+			return prefix + "BOULEVARD " + self.getEolAbbr(atom.group(3) + atom.group(4))
 
 
 		# Handle normal addresses.
 
 		parts = address.split(' ')
 		count = len(parts) - 1
+		firstsuff = None
 		suff = 0
 		id_count = 0
 		out = [None] * len(parts)
@@ -1423,6 +1425,7 @@ class AddressStandardizationSolution:
 			if parts[counter] in self.suffixes:
 				if not suff:
 					# The first suffix (from the right).
+					firstsuff = counter
 
 					if counter + 2 < count and (not out[counter+1]) and (not out[counter+2]):
 						switch = out[counter+1] + ' ' + out[counter+2]
@@ -1459,7 +1462,7 @@ class AddressStandardizationSolution:
 				prior = counter - 1
 				nextv = counter + 1;
 				if count >= nextv \
-						and parts[nextv] in self.suffixes:
+						and nextv == firstsuff:
 					out[counter] = self.directionals[parts[counter]]
 					if suff <= 1:
 						out[counter] = self.directionals[out[counter] + "-R"]
