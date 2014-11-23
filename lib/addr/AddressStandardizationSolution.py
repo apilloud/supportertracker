@@ -1453,15 +1453,24 @@ class AddressStandardizationSolution:
 				suff += 1
 
 			elif parts[counter] in self.identifiers:
-				out[counter] = self.identifiers[parts[counter]]
-				if suff > 0:
-					out[counter] = self.identifiers[out[counter] + "-R"]
-				id_count += 1
+				prior = counter - 1
+				if prior >= 0 and parts[prior] in self.identifiers and id_count == 0:
+					# Don't touch unit numbers
+					pass
+				else:
+					out[counter] = self.identifiers[parts[counter]]
+					if suff > 0:
+						out[counter] = self.identifiers[out[counter] + "-R"]
+					id_count += 1
 
 			elif parts[counter] in self.directionals:
 				prior = counter - 1
-				nextv = counter + 1;
-				if count >= nextv \
+				nextv = counter + 1
+				if prior >= 0 and parts[prior] in self.identifiers and id_count == 0:
+					# Don't touch unit numbers
+					pass
+
+				elif count >= nextv \
 						and nextv == firstsuff:
 					out[counter] = self.directionals[parts[counter]]
 					if suff <= 1:
@@ -1480,6 +1489,8 @@ class AddressStandardizationSolution:
 					pass
 				else:
 					out[counter] = self.directionals[parts[counter]]
+					if count < 2:
+						out[counter] = self.directionals[out[counter] + "-R"]
 
 				if counter == count:
 					id_count = 1
