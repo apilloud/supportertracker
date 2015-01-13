@@ -1,5 +1,5 @@
 import re
-import lib.addr
+from AddressStandardizationSolution import AddressStandardizationSolution
 
 class Address:
 	def __init__(self, mail, city='', statecode='', zipcode=''):
@@ -9,7 +9,7 @@ class Address:
 		""" cur myst be a key/value database cursor """
 		address_in = self.data
 		address = {'#normalized': True}
-		address_stand = lib.addr.AddressStandardizationSolution()
+		address_stand = AddressStandardizationSolution()
 
 		if 'city' in address_in and address_in['city']:
 			address['city'] = address_in['city'].upper()
@@ -578,101 +578,6 @@ class Address:
 			if 'unitnum' in address and address['unitnum']:
 				address['mail'] = address['mail'] + ' ' + address['unitnum']
 			address['mail'] = address['mail'].strip()
-
-			# Lookup the prefered first line
-			if 'basealternatecode' in address and address['basealternatecode'] == 'A' and not ('basealternatecode' in address_in and address_in['basealternatecode'] == 'A'):
-				# set details out of database
-				address_base = address
-				$query = db_select('usps_zip4_detail', 'zip4_detail');
-				$query->addField('zip4_detail', 'stnumlow', 'stnum');
-				$query->addField('zip4_detail', 'stpredirection');
-				$query->addField('zip4_detail', 'stname');
-				$query->addField('zip4_detail', 'sttype');
-				$query->addField('zip4_detail', 'unittype');
-				$query->addField('zip4_detail', 'unitnumlow');
-				$query->addField('zip4_detail', 'unitnumhigh');
-				$query->addField('zip4_detail', 'stpostdirection');
-				$query->addField('zip4_detail', 'recordtypecode');
-				$query->condition('zip4_detail.basealternatecode', 'B');
-				$query->condition('zip4_detail.zipcode', $address['zipcode']);
-				$query->condition('zip4_detail.zipcode4low', $address['zipcode4']);
-				$query->condition('zip4_detail.zipcode4high', $address['zipcode4high']);
-				$values = $query->range(0, 1)->execute();
-				if (count($values) > 0) foreach ($values as $vkey => $vvalue) {
-					if ($vvalue->unittype == '') {
-						unset($vvalue->unittype);
-					}
-					if ($vvalue->unitnumlow != '') {
-						if ($vvalue->unitnumlow == $vvalue->unitnumhigh) {
-							$address_base['unitnum'] = $vvalue->unitnumlow;
-						}
-						else {
-							// Unit number ranges Example: (J65 -> 00000065, 401 -> 401B, 1150 -> 1150, 101A -> A101, A -> 1...)
-							preg_match('/^([A-Z]*)([\d]*)([A-Z]*)$/', $address_base['unitnum'], $base_tokens);
-							preg_match('/^([A-Z]*)([\d]*)([A-Z]*)$/', ltrim($vvalue->unitnumlow, '0'), $low_tokens);
-							preg_match('/^([A-Z]*)([\d]*)([A-Z]*)$/', ltrim($vvalue->unitnumhigh, '0'), $high_tokens);
-
-							// ? -> Numeric
-							if ($low_tokens[2] && !$low_tokens[1] && !$low_tokens[3]) {
-								// Numeric -> Numeric
-								if ($base_tokens[2] >= $low_tokens[2] && $base_tokens[2] <= $high_tokens[2])
-								{
-									$address_base['unitnum'] = $base_tokens[2];
-								}
-								// Alpha -> Numeric
-								else if (!$base_tokens[2]) {
-									$num = (ord($base_tokens[1])-ord('A'))+1;
-									if ($num >= $low_tokens[2] && $num <= $high_tokens[2])
-									{
-										$address_base['unitnum'] = $num;
-									}
-								}
-							}
-							// ? -> Alpha
-							elseif (!$low_tokens[2] && $low_tokens[1] && !$low_tokens[3]) {
-								// Numeric -> Alpha
-								if ($base_tokens[2] && !$base_tokens[1] && !$base_tokens[3] && $base_tokens[2] < 27)
-								{
-									$num = chr($base_tokens[1]+ord('A')+1);
-									if ($num >= $low_tokens[3] && $num <= $high_tokens[3])
-									{
-										$address_base['unitnum'] = $num;
-									}
-								}
-							}
-							// ? -> Alpha Numeric
-							elseif ($low_tokens[2] && $low_tokens[1] && !$low_tokens[3]) {
-								// Numeric Alpha -> Alpha Numeric
-								if ($base_tokens[2] >= $low_tokens[2] && $base_tokens[2] <= $high_tokens[2] && $base_tokens[3] >= $low_tokens[1] && $base_tokens[3] <= $high_tokens[1])
-								{
-									$address_base['unitnum'] = $base_tokens[3] . $base_tokens[2];
-								}
-							}
-							// ? -> Numeric Alpha
-							elseif ($low_tokens[2] && !$low_tokens[1] && $low_tokens[3]) {
-								// Alpha Numeric -> Numeric Alpha
-								if ($base_tokens[2] >= $low_tokens[2] && $base_tokens[2] <= $high_tokens[2] && $base_tokens[1] >= $low_tokens[3] && $base_tokens[1] <= $high_tokens[3])
-								{
-									$address_base['unitnum'] = $base_tokens[2] . $base_tokens[1];
-								}
-							}
-						}
-					}
-					foreach ($vvalue as $key => $value) {
-						$address_base[$key] = $value;
-					}
-					$address_base['stnum'] = ltrim($address_base['stnum'], '0');
-					$address_base['stfrac'] = '';
-					if (!$address_base['unitnum']) {
-						$address_base['unitnum'] = $address['stnum'];
-					}
-					unset($address_base['mail']);
-					$address_base = $this->normalize($address_base);
-					if ($address_base['unittype'] != '#') {
-						$address = $address_base;
-					}
-				}
-			}
 
 			if 'zipcode4' in address and (not address['zipcode4'].isdigit() or int(address['zipcode4']) == 0):
 				del address['zipcode4']

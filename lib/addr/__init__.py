@@ -1,1 +1,1 @@
-from AddressStandardizationSolution import AddressStandardizationSolution
+from cass import Address
